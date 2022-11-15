@@ -8,11 +8,12 @@ import random
 __all__ = ['BNInception', 'bn_inception']
 
 """
-Inception v2 was ported from Caffee to pytorch 0.2, see 
-https://github.com/Cadene/pretrained-models.pytorch. I've ported it to 
-PyTorch 0.4 for the Proxy-NCA implementation, see 
+Inception v2 was ported from Caffee to pytorch 0.2, see
+https://github.com/Cadene/pretrained-models.pytorch. I've ported it to
+PyTorch 0.4 for the Proxy-NCA implementation, see
 https://github.com/dichotomies/proxy-nca.
 """
+
 
 def l2_norm(input):
     input_size = input.size()
@@ -23,12 +24,15 @@ def l2_norm(input):
     output = _output.view(input_size)
     return output
 
+
 class bn_inception(nn.Module):
-    def __init__(self, embedding_size, bg_embedding_size = 1024, pretrained = True, is_norm=True, is_student = True, bn_freeze = True):
+    def __init__(self, embedding_size, bg_embedding_size=1024, pretrained=True, is_norm=True, is_student=True, bn_freeze=True):
         super(bn_inception, self).__init__()
         self.model = BNInception()
         if pretrained:
-            weight = model_zoo.load_url('http://data.lip6.fr/cadene/pretrainedmodels/bn_inception-52deb4733.pth')
+            # import torchvision
+            weight = model_zoo.load_url('https://data.lip6.fr/cadene/pretrainedmodels/bn_inception-52deb4733.pth')
+            # weight = torchvision.models.inception_v3(pretrained=True).state_dict()
             weight = {k: v.squeeze(0) if v.size(0) == 1 else v for k, v in weight.items()}
             self.model.load_state_dict(weight)
 
@@ -43,39 +47,39 @@ class bn_inception(nn.Module):
         self.model.embedding_g = nn.Linear(self.num_ftrs, self.bg_embedding_size)
         nn.init.orthogonal_(self.model.embedding_g.weight)
         nn.init.constant_(self.model.embedding_g.bias, 0)
-        
+
         if is_student:
             self.model.embedding_f = nn.Linear(self.num_ftrs, self.embedding_size)
             nn.init.orthogonal_(self.model.embedding_f.weight)
             nn.init.constant_(self.model.embedding_f.bias, 0)
-        
+
         if bn_freeze:
             for m in self.model.modules():
                 if isinstance(m, nn.BatchNorm2d):
                     m.eval()
                     m.weight.requires_grad_(False)
                     m.bias.requires_grad_(False)
-    
+
     def forward(self, input):
         _, _, x = self.model.features(input)
         avg_x = self.model.gap(x)
         max_x = self.model.gmp(x)
-        
+
         x = avg_x + max_x
         feat = x.view(x.size(0), -1)
-        
+
         if self.is_student:
             x_f = self.model.embedding_f(feat)
             if self.is_norm:
                 x_f = l2_norm(x_f)
-            
+
         x_g = self.model.embedding_g(feat)
-        
+
         if self.is_student:
             return x_g, x_f
         else:
             return x_g
-    
+
 class BNInception(nn.Module):
 
     def __init__(self):
@@ -303,8 +307,8 @@ class BNInception(nn.Module):
         self.inception_5b_pool_proj_bn = nn.BatchNorm2d(128, eps=1e-05, momentum=0.9, affine=True)
         self.inception_5b_relu_pool_proj = nn.ReLU (inplace)
         self.global_pool = nn.AvgPool2d(7, stride=1, padding=0, ceil_mode=True, count_include_pad=True)
-        self.last_linear = nn.Linear(self.num_ftrs, 1000)
-        
+        self.last_linear = nn.Linear(1024, 1000)
+
     def features(self, input):
         conv1_7x7_s2_out = self.conv1_7x7_s2(input)
         conv1_7x7_s2_bn_out = self.conv1_7x7_s2_bn(conv1_7x7_s2_out)

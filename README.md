@@ -12,21 +12,21 @@
 
 <br>
 
-Official PyTorch implementation of CVPR 2022 paper **Self-Taught Metric Learning without Labels (STML)**. 
+Official PyTorch implementation of CVPR 2022 paper **Self-Taught Metric Learning without Labels (STML)**.
 A standard embedding network trained with STML achieves SOTA performance on unsupervised metric learning and sometimes even beats supervised learning models.
 This repository provides source code of unsupervised metric learning experiments on three datasets (CUB-200-2011, Cars-196, Stanford Online Products).
 
 ## Overview
 
 ### Self-Taught Metric Learning
-1. Contextualized semantic similarity between a pair of data is estimated on the embedding space of the teacher network. 
+1. Contextualized semantic similarity between a pair of data is estimated on the embedding space of the teacher network.
 2. The semantic similarity is then used as a pseudo label, and the student network is optimized by relaxed contrastive loss with KL divergence.
 3. The teacher network is updated by an exponential moving average of the student.
-  
+
 <p align="center"><img src="misc/stml_overview.png" alt="graph" width="90%"></p>
 
 ### Experimental Restuls
-- Our model with 128 embedding dimensions outperforms all previous arts using higher embedding dimensions and sometimes surpasses supervised learning methods. 
+- Our model with 128 embedding dimensions outperforms all previous arts using higher embedding dimensions and sometimes surpasses supervised learning methods.
 
 <p align="center"><img src="misc/stml_recall.png" alt="graph" width="70%"></p>
 
@@ -100,7 +100,7 @@ python3 code/main.py --gpu-id 0 \
                         --num_neighbors 5
 ```
 
-- Train a target embedding network with BN-Inception (d=512) using STML 
+- Train a target embedding network with BN-Inception (d=512) using STML
 
 ```bash
 python3 code/main.py --gpu-id 0 \
@@ -136,28 +136,47 @@ python3 code/main.py --gpu-id 0 \
                         --emb-lr 1e-2
 ```
 
-- Train a target embedding network with BN-Inception (d=512) using STML 
+- Train a target embedding network with BN-Inception (d=512) using STML
 
 ```bash
-python3 code/main.py --gpu-id 0 \
-                        --model bn_inception \
-                        --embedding_size 512 \
-                        --optimizer adamp \
-                        --lr 1e-4 \
-                        --dataset SOP \
-                        --view 2 \
-                        --sigma 3 \
-                        --delta 0.9 \
-                        --num_neighbors 2 \
-                        --momentum 0.9 \
-                        --weight-decay 1e-2 \
-                        --emb-lr 1e-2 \
-                        --bn_freeze 1
+CUDA_VISIBLES_DEVICES='1,2' python code/main.py --gpu-id 1 \
+--DATA_DIR /local/DEEPLEARNING/image_retrieval/ \
+--model bn_inception \
+--embedding_size 512 \
+--optimizer adamp \
+--lr 1e-4 \
+--dataset SOP \
+--view 2 \
+--sigma 3 \
+--delta 0.9 \
+--num_neighbors 2 \
+--momentum 0.9 \
+--weight_decay 1e-2 \
+--emb-lr 1e-2 \
+--bn_freeze 1
+```
+
+```bash
+CUDA_VISIBLES_DEVICES='1,2' python code/main.py --gpu-id -1 \
+--DATA_DIR /local/DEEPLEARNING/image_retrieval/ \
+--model resnet50 \
+--embedding_size 512 \
+--optimizer adamp \
+--lr 1e-4 \
+--dataset SOP \
+--view 2 \
+--sigma 3 \
+--delta 0.9 \
+--num_neighbors 2 \
+--momentum 0.9 \
+--weight_decay 1e-2 \
+--emb-lr 1e-2 \
+--bn_freeze 1
 ```
 
 ### Stanford Online Products (Unsupervised & From Scratch)
 
-- Train a target embedding network with ResNet18 (d=128) using STML 
+- Train a target embedding network with ResNet18 (d=128) using STML
 
 ```bash
 python3 code/main.py --gpu-id 0 \

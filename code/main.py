@@ -1,16 +1,21 @@
-import torch, math, time, argparse, random, os, warnings
-import dataset, net, utils, loss
+import os
+import random
+import warnings
+import argparse
+
 import numpy as np
-import torch.nn.functional as F
+import torch
+import torch.nn as nn
+from tqdm import tqdm
 # import wandb
 
-from net.resnet import *
-from net.inception import *
-from net.bn_inception import *
+import loss
+import utils
+import dataset
 from dataset import sampler
-from torch.utils.data.sampler import BatchSampler
-from torch.utils.data.dataloader import default_collate
-from tqdm import *
+from net.inception import inception_v1
+from net.bn_inception import bn_inception
+from net.resnet import Resnet18, Resnet50
 
 
 seed = 0
@@ -146,7 +151,7 @@ args = parser.parse_args()
 if args.seed is not None:
     random.seed(args.seed)
     torch.manual_seed(args.seed)
-    cudnn.deterministic = True
+    torch.backends.cudnn.deterministic = True
     warnings.warn(
         'You have chosen to seed training. '
         'This will turn on the CUDNN deterministic setting, '
@@ -158,7 +163,7 @@ if args.gpu_id != -1:
     torch.cuda.set_device(args.gpu_id)
 
 # Directory for Log
-model_name = 'STML_{}_embedding{}_{}_lr{}_batch{}'.format(args.dataset, args.model, args.embedding_size, args.optimizer, args.lr, args.sz_batch)
+model_name = 'STML_{}_{}_embedding{}_{}_lr{}_batch{}'.format(args.dataset, args.model, args.embedding_size, args.optimizer, args.lr, args.sz_batch)
 LOG_DIR = args.LOG_DIR + '/logs_{}/{}'.format(args.dataset, model_name)
 # Wandb Initialization
 # wandb.init(project='STML', notes=LOG_DIR, name='{}'.format(model_name))
@@ -263,7 +268,14 @@ else:
 if args.gpu_id == -1:
     model_teacher = nn.DataParallel(model_teacher)
     model_student = nn.DataParallel(model_student)
-stml_criterion = loss.STML_loss(delta=args.delta, sigma=args.sigma, view=args.view, disable_mu=args.student_norm, topk=args.num_neighbors * args.view).cuda()
+stml_criterion = loss.STML_loss(
+    delta=args.delta,
+    sigma=args.sigma,
+    view=args.view,
+    disable_mu=args.student_norm,
+    topk=args.num_neighbors * args.view,
+    no_f=args.embedding_size < 0,
+).cuda()
 
 # Momentum Update
 momentum_update = loss.Momentum_Update(momentum=args.momentum).cuda()
@@ -275,8 +287,7 @@ if args.gpu_id != -1:
 else:
     embedding_param = list(model_student.module.model.embedding_f.parameters()) + list(model_student.module.model.embedding_g.parameters())
 param_groups = [
-    {'params': list(set(model_student.parameters()).difference(set(embedding_param))) if args.gpu_id != -1 else
-                 list(set(model_student.module.parameters()).difference(set(embedding_param)))},
+    {'params': list(set(model_student.parameters()).difference(set(embedding_param))) if args.gpu_id != -1 else list(set(model_student.module.parameters()).difference(set(embedding_param)))},
     {'params': embedding_param, 'lr': fc_layer_lr, 'weight_decay': float(args.weight_decay)},
 ]
 
@@ -324,7 +335,7 @@ for epoch in range(0, args.nb_epochs):
 
     losses_per_epoch = []
 
-    pbar = tqdm(enumerate(dl_tr))
+    pbar = tqdm(enumerate(dl_tr), disable=os.getenv('TQDM_DISABLE'))
     for batch_idx, data in pbar:
         x, y, idx = data
         y = y.squeeze().cuda(non_blocking=True)

@@ -142,7 +142,16 @@ class Resnet34(nn.Module):
 
 
 class Resnet50(nn.Module):
-    def __init__(self, embedding_size, bg_embedding_size=2048, pretrained=True, is_norm=True, is_student=True, bn_freeze=True, swav_pretrained=False):
+    def __init__(
+        self,
+        embedding_size,
+        bg_embedding_size=2048,
+        pretrained=True,
+        is_norm=True,
+        is_student=True,
+        bn_freeze=True,
+        swav_pretrained=False,
+    ):
         super(Resnet50, self).__init__()
 
         if swav_pretrained:
@@ -162,9 +171,14 @@ class Resnet50(nn.Module):
         nn.init.constant_(self.model.embedding_g.bias, 0)
 
         if is_student:
-            self.model.embedding_f = nn.Linear(self.num_ftrs, self.embedding_size)
-            nn.init.orthogonal_(self.model.embedding_f.weight)
-            nn.init.constant_(self.model.embedding_f.bias, 0)
+            if self.embedding_size == -1:
+                self.model.embedding_f = self.model.embedding_g
+            elif self.embedding_size == -2:
+                self.model.embedding_f = nn.Identity()
+            else:
+                self.model.embedding_f = nn.Linear(self.num_ftrs, self.embedding_size)
+                nn.init.orthogonal_(self.model.embedding_f.weight)
+                nn.init.constant_(self.model.embedding_f.bias, 0)
 
         if bn_freeze:
             for m in self.model.modules():

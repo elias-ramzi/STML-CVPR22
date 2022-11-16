@@ -47,6 +47,10 @@ parser.add_argument(
     help='Size of embedding that is appended to backbone model.'
 )
 parser.add_argument(
+    '--bg_hidden_size', default=None, type=int,
+    help='Size of hidden dimension if BG is a MLP (default: None, BG is linear).'
+)
+parser.add_argument(
     '--batch-size', default=120, type=int,
     dest='sz_batch',
     help='Number of samples per batch.'
@@ -234,7 +238,7 @@ elif args.model.find('bn_inception')+1:
 elif args.model.find('resnet18')+1:
     model_student = Resnet18(args.embedding_size, args.bg_embedding_size, args.pretrained, args.student_norm, True, bn_freeze=args.bn_freeze)
 elif args.model.find('resnet50')+1:
-    model_student = Resnet50(args.embedding_size, args.bg_embedding_size, args.pretrained, args.student_norm, True, bn_freeze=args.bn_freeze, swav_pretrained=args.swav)
+    model_student = Resnet50(args.embedding_size, args.bg_embedding_size, args.bg_hidden_size, args.pretrained, args.student_norm, True, bn_freeze=args.bn_freeze, swav_pretrained=args.swav)
 
 # Teacher Model
 if args.model.find('googlenet')+1:
@@ -244,7 +248,7 @@ elif args.model.find('bn_inception')+1:
 elif args.model.find('resnet18')+1:
     model_teacher = Resnet18(args.embedding_size, args.bg_embedding_size, args.pretrained, args.teacher_norm, False, bn_freeze=args.bn_freeze)
 elif args.model.find('resnet50')+1:
-    model_teacher = Resnet50(args.embedding_size, args.bg_embedding_size, args.pretrained, args.teacher_norm, False, bn_freeze=args.bn_freeze, swav_pretrained=args.swav)
+    model_teacher = Resnet50(args.embedding_size, args.bg_embedding_size, args.bg_hidden_size, args.pretrained, args.teacher_norm, False, bn_freeze=args.bn_freeze, swav_pretrained=args.swav)
 
 model_student = model_student.cuda()
 model_teacher = model_teacher.cuda()

@@ -146,6 +146,7 @@ class Resnet50(nn.Module):
         self,
         embedding_size,
         bg_embedding_size=2048,
+        bg_hidden_size=None,
         pretrained=True,
         is_norm=True,
         is_student=True,
@@ -162,13 +163,22 @@ class Resnet50(nn.Module):
         self.is_student = is_student
         self.embedding_size = embedding_size
         self.bg_embedding_size = bg_embedding_size
+        self.bg_hidden_size = bg_hidden_size
         self.num_ftrs = self.model.fc.in_features
         self.model.gap = nn.AdaptiveAvgPool2d(1)
         self.model.gmp = nn.AdaptiveMaxPool2d(1)
 
-        self.model.embedding_g = nn.Linear(self.num_ftrs, self.bg_embedding_size)
-        nn.init.orthogonal_(self.model.embedding_g.weight)
-        nn.init.constant_(self.model.embedding_g.bias, 0)
+        if (self.bg_hidden_size is None) or (self.bg_hidden_size == -1):
+            self.model.embedding_g = nn.Linear(self.num_ftrs, self.bg_embedding_size)
+            nn.init.orthogonal_(self.model.embedding_g.weight)
+            nn.init.constant_(self.model.embedding_g.bias, 0)
+        else:
+            self.model.embedding_g = nn.Sequential(
+                nn.Linear(self.num_ftrs, self.bg_hidden_size, bias=False),
+                nn.BatchNorm1d(self.bg_hidden_size),
+                nn.ReLU(inplace=True),
+                nn.Linear(self.bg_hidden_size, self.bg_embedding_size),
+            )
 
         if is_student:
             if self.embedding_size == -1:

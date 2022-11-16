@@ -23,17 +23,28 @@ export TORCH_HOME=${SCRATCH}/pretrained_models
 export TMPDIR=$JOBSCRATCH
 export TQDM_DISABLE='yes'
 
-# size[0]=-1
-size[0]=-2
+# embedding_size[0]=-1
+# bg_embedding_size[0]=1024
+# bg_hidden_size[0]=-1
+
+# embedding_size[0]=-2
+# bg_embedding_size[0]=1024
+# bg_hidden_size[0]=-1
+
+embedding_size[0]=-2
+bg_embedding_size[0]=256
+bg_hidden_size[0]=4096
 
 
 srun python code/main.py \
 --gpu-id -1 \
 --DATA_DIR $SCRATCH \
---LOG_DIR $SCRATCH/experiments/STML/NO_F_Identity \
+--LOG_DIR $SCRATCH/experiments/STML/NO_F_Identity_MLP \
 --workers 2 \
 --model resnet50 \
---embedding_size ${size[${SLURM_ARRAY_TASK_ID}]} \
+--embedding_size ${embedding_size[${SLURM_ARRAY_TASK_ID}]} \
+--bg_embedding_size ${bg_embedding_size[${SLURM_ARRAY_TASK_ID}]} \
+--bg_hidden_size ${bg_hidden_size[${SLURM_ARRAY_TASK_ID}]} \
 --optimizer adamp \
 --lr 1e-4 \
 --dataset SOP \
